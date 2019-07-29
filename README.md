@@ -9,7 +9,7 @@
 ## Run in production
 
 1. Run `npm build` command
-2. Run `npm prod` command
+2. Run `npm run prod` command
 
 ## Database migration
 
@@ -30,8 +30,6 @@
 ```
 
 Get token from response and set to request header with `auth` key
-
-`HEADER`
 
 ```json
 {
