@@ -6,25 +6,38 @@ import { doApiResponse } from '../utils/api';
 
 const routes = Router();
 
-routes.get('/me', UserController.me);
-routes.get('/', checkRole([UserRole.ADMIN]), UserController.listAll);
+routes.get('/me', UserController.me, doApiResponse);
 routes.get(
   '/:id([0-9]+)',
   checkRole([UserRole.ADMIN]),
-  UserController.getOneById
+  UserController.getOneById,
+  doApiResponse
 );
-routes.post('/', checkRole([UserRole.ADMIN]), UserController.newUser);
+routes.get(
+  '/',
+  checkRole([UserRole.ADMIN]),
+  UserController.listAll,
+  doApiResponse
+);
+
 routes.patch(
   '/:id([0-9]+)',
   checkRole([UserRole.ADMIN]),
-  UserController.editUser
+  UserController.editUser,
+  doApiResponse
 );
+routes.post(
+  '/',
+  checkRole([UserRole.ADMIN]),
+  UserController.newUser,
+  doApiResponse
+);
+
 routes.delete(
   '/:id([0-9]+)',
   checkRole([UserRole.ADMIN]),
-  UserController.deleteUser
+  UserController.deleteUser,
+  doApiResponse
 );
-
-routes.use('*', doApiResponse);
 
 export default routes;
