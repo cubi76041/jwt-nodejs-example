@@ -6,7 +6,7 @@
   "password": "password",
   "database": "jwt-nodejs-example",
   "synchronize": true,
-  "logging": true,
+  "logging": false,
   "entities": ["build/entities/**/!(Base).js"],
   "migrations": ["build/migration/**/*.js"],
   "subscribers": ["build/subscriber/**/*.js"],

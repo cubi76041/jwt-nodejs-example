@@ -1,15 +1,19 @@
-import { Request, Response } from 'express';
+import { NextFunction } from 'express';
 import { getRepository } from 'typeorm';
 import * as jwt from 'jsonwebtoken';
 
+import { Request, Response } from '../utils/api';
 import { User } from '../entities/User';
 import config from '../config/config';
+import apiErrors from '../config/error';
 
 class AuthController {
-  static login = async (req: Request, res: Response) => {
+  static login = async (req: Request, res: Response, next: NextFunction) => {
     let { email, password } = req.body;
     if (!(email && password)) {
-      return res.status(400).send();
+      res.apiError = apiErrors.INVALID_CREDENTIALS;
+      res.apiFailureStatus = 401;
+      return next();
     }
 
     const userRepo = getRepository(User);
@@ -18,11 +22,15 @@ class AuthController {
     try {
       user = await userRepo.findOneOrFail({ where: { email } });
     } catch (error) {
-      return res.status(401).send();
+      res.apiError = apiErrors.INVALID_CREDENTIALS;
+      res.apiFailureStatus = 401;
+      return next();
     }
 
     if (!user.validatePassword(password)) {
-      return res.status(401).send();
+      res.apiError = apiErrors.INVALID_CREDENTIALS;
+      res.apiFailureStatus = 401;
+      return next();
     }
 
     const token = jwt.sign(
@@ -36,7 +44,13 @@ class AuthController {
       }
     );
 
-    res.send(token);
+    res.apiData = {
+      token
+    };
+    res.apiSuccessStatus = 200;
+
+    // should return authenticated token with status 200: OK
+    next();
   };
 }
 

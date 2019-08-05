@@ -1,22 +1,51 @@
 import { getRepository } from 'typeorm';
-import { Request, Response } from 'express';
+import { Request, Response } from '../utils/api';
 import { classToPlain, plainToClass } from 'class-transformer';
 import { User } from '../entities/User';
 import { validate } from 'class-validator';
+import { NextFunction } from 'express';
+import apiErrors, { ApiError } from '../config/error';
 
 export class UserController {
-  static listAll = async (req: Request, res: Response) => {
+  static me = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = res.locals.user.userId;
+    const userRepo = getRepository(User);
+    let user: User;
+
+    try {
+      user = await userRepo.findOneOrFail({
+        where: { id: userId }
+      });
+    } catch (error) {
+      res.apiError = apiErrors.NOT_FOUND;
+      return next();
+    }
+
+    res.apiData = classToPlain(user);
+    // should response found user with status 200: OK
+    next();
+  };
+
+  static listAll = async (req: Request, res: Response, next: NextFunction) => {
     const userRepo = getRepository(User);
     let users: Array<User> = [];
 
     try {
       users = await userRepo.find();
-    } catch (error) {}
+    } catch (error) {
+      res.apiData = [];
+    }
 
-    res.json(classToPlain(users));
+    res.apiData = classToPlain(users);
+    // should response all found users with status 200: OK
+    next();
   };
 
-  static getOneById = async (req: Request, res: Response) => {
+  static getOneById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     const userRepo = getRepository(User);
     const id: number = <number>req.params.id;
     let user: User;
@@ -24,24 +53,31 @@ export class UserController {
     try {
       user = await userRepo.findOneOrFail(id);
     } catch (error) {
-      return res.status(404).send('User not found');
+      res.apiError = apiErrors.NOT_FOUND;
+      return next();
     }
 
-    res.json(classToPlain(user));
+    res.apiData = classToPlain(user);
+    // should response found user with status 200: OK
+    next();
   };
 
-  static newUser = async (req: Request, res: Response) => {
+  static newUser = async (req: Request, res: Response, next: NextFunction) => {
     let user: User = new User();
 
     try {
       user = plainToClass(User, req.body, { excludeExtraneousValues: true });
     } catch (error) {
-      return res.status(400).send();
+      res.apiError = apiErrors.INVALID_ARGUMENTS;
+      return next();
     }
 
     const errors = await validate(user);
     if (errors.length > 0) {
-      return res.status(400).send(errors);
+      res.apiError = apiErrors.INVALID_ARGUMENTS;
+      res.apiError.errors = errors;
+      // should response error body with details and status 400: Bad Request
+      return next();
     }
 
     user.hashPassword();
@@ -50,20 +86,25 @@ export class UserController {
     try {
       await userRepo.save(user);
     } catch (error) {
-      return res.status(409).send('email is already exists');
+      res.apiError = apiErrors.EMAIL_EXISTS;
+      res.apiFailureStatus = 409;
+      return next();
     }
 
-    res.status(201).json(classToPlain(user));
+    res.apiData = classToPlain(user);
+    // should response new user with status 200: OK
+    next();
   };
 
-  static editUser = async (req: Request, res: Response) => {
+  static editUser = async (req: Request, res: Response, next: NextFunction) => {
     const id: number = <number>req.params.id;
     let newUser: User = new User();
 
     try {
       newUser = plainToClass(User, req.body, { excludeExtraneousValues: true });
     } catch (error) {
-      return res.status(400).send();
+      res.apiError = apiErrors.INVALID_ARGUMENTS;
+      return next();
     }
 
     const userRepo = getRepository(User);
@@ -72,7 +113,8 @@ export class UserController {
     try {
       user = await userRepo.findOneOrFail(id);
     } catch (error) {
-      return res.status(404).send('user not found');
+      res.apiError = apiErrors.NOT_FOUND;
+      return next();
     }
 
     user.email = newUser.email || user.email;
@@ -84,7 +126,9 @@ export class UserController {
 
     const errors = await validate(user);
     if (errors.length > 0) {
-      return res.status(400).send(errors);
+      res.apiError = apiErrors.INVALID_ARGUMENTS;
+      res.apiError.errors = errors;
+      return next();
     }
 
     if (newUser.password) {
@@ -93,21 +137,29 @@ export class UserController {
 
     userRepo.save(user);
 
-    res.status(204).send();
+    res.apiData = classToPlain(user);
+    // should response updated user with status 200: OK
+    next();
   };
 
-  static deleteUser = async (req: Request, res: Response) => {
+  static deleteUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     const userRepo = getRepository(User);
     const id: number = <number>req.params.id;
-    let user: User;
 
     try {
-      user = await userRepo.findOneOrFail(id);
+      await userRepo.findOneOrFail(id);
     } catch (error) {
-      return res.status(404).send('User not found');
+      res.apiError = apiErrors.NOT_FOUND;
+      return next();
     }
 
     userRepo.delete(id);
-    res.send(204);
+
+    // should response no body with status 204: No Content
+    next();
   };
 }

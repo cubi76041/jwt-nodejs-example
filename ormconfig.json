@@ -6,7 +6,7 @@
   "password": "password",
   "database": "jwt-nodejs-example",
   "synchronize": true,
-  "logging": true,
+  "logging": false,
   "entities": ["src/entities/**/!(Base).ts"],
   "migrations": ["src/migration/**/*.ts"],
   "subscribers": ["src/subscriber/**/*.ts"],
